@@ -1,129 +1,50 @@
-# Deep Learning Model Comparison for Medical Image Analysis
+# Deep Learning for Gastrointestinal Image Classification
 
 ## Overview
 
-This project evaluates and compares three deep learning architectures for medical image analysis using the **Kvasir-SEG gastrointestinal polyp dataset**.
-
-The objective is to study the trade-offs between predictive performance, generalization, model complexity, and computational cost under a consistent experimental protocol.
-
-The selected architectures represent two convolutional neural network (CNN) approaches and one Vision Transformer (ViT).
-
-## Objectives
-
-* Compare three pretrained deep learning architectures.
-* Evaluate predictive performance using appropriate classification metrics.
-* Analyze generalization and potential overfitting.
-* Measure training time, inference time, parameter count, and GPU memory consumption when available.
-* Compare convergence speed and training stability.
-* Provide reproducible experiments and documented implementation details.
-
-## Dataset
-
-**Kvasir-SEG** contains 1,000 gastrointestinal endoscopy images with corresponding pixel-level polyp segmentation masks.
-
-* Domain: Gastroenterology
-* Modality: RGB colonoscopy images
-* Annotations: Polyp segmentation masks
-* Original task: Semantic segmentation
-* Dataset source: https://datasets.simula.no/kvasir-seg/
-
-**Important:** All original Kvasir-SEG images depict polyps. Binary polyp-versus-normal classification therefore requires additional negative images. The final classification labels and their source must be documented before training.
+This project compares three deep learning architectures for multiclass gastrointestinal image classification using the **Kvasir dataset**. The objective is to evaluate how convolutional neural networks (CNNs) and Vision Transformers perform when classifying endoscopic images into eight categories.
 
 ## Models
 
-| Model              | Architecture | Purpose                                               |
-| ------------------ | ------------ | ----------------------------------------------------- |
-| ResNet-18          | CNN          | Baseline performance                                  |
-| EfficientNet-B0    | CNN          | Accuracy–efficiency trade-off                         |
-| Vision Transformer | Transformer  | Comparison with attention-based image representations |
+* **ResNet-18:** CNN baseline with residual connections.
+* **EfficientNet-B0:** computationally efficient CNN.
+* **Vision Transformer (ViT-B/16):** transformer-based image classifier.
 
-All models will use pretrained weights and the same training, validation, and test partitions wherever applicable.
+All models will use ImageNet-pretrained weights and a consistent experimental protocol.
+
+## Dataset
+
+The [Kvasir dataset](https://datasets.simula.no/kvasir/) contains endoscopic images representing anatomical landmarks, pathological findings, and endoscopic procedures:
+
+* Dyed-lifted polyps
+* Dyed-resection margins
+* Esophagitis
+* Normal cecum
+* Normal pylorus
+* Normal Z-line
+* Polyps
+* Ulcerative colitis
 
 ## Methodology
 
-1. Review the literature on medical image classification and polyp analysis.
-2. Define the classification task and label-generation procedure.
-3. Inspect the dataset and establish reproducible data splits.
-4. Resize and normalize images using the appropriate pretrained model's input requirements.
-5. Apply training-only data augmentation.
-6. Fine-tune the three architectures using a common experimental protocol.
-7. Evaluate predictive performance, generalization, convergence, and computational cost.
-8. Compare results and discuss limitations.
-9. Prepare the final scientific article in IEEE conference format.
+1. Inspect the dataset and verify class distributions.
+2. Resize and normalize images; apply data augmentation to training data only.
+3. Create stratified training, validation, and test splits.
+4. Train and evaluate the three pretrained architectures.
+5. Compare classification performance, generalization, convergence, and computational cost.
 
-## Evaluation Metrics
+## Evaluation
 
-### Classification performance
-
-* Accuracy
-* Precision
-* Recall
-* F1-score
-* Confusion matrix
-
-ROC-AUC may also be reported if both classes are available and the test protocol supports it.
-
-### Computational performance
-
-* Total and trainable parameters
-* Training time per epoch and total training time
-* Inference latency
-* Peak GPU memory usage, when available
-* Epoch at which the best validation score is achieved
-
-### Generalization
-
-* Training versus validation performance
-* Validation loss and learning curves
-* Final performance on an untouched test set
-* Variability across repeated runs, if computational resources permit
+* Accuracy and macro-F1 score
+* Per-class precision, recall, and F1-score
+* Training and inference time
+* Number of parameters and peak GPU memory
+* Training and validation learning curves
 
 ## Reproducibility
 
-The repository will include:
+The repository will include preprocessing scripts, model training and evaluation code, configuration files, random seeds, and saved experimental results.
 
-* Fixed random seeds
-* Documented dataset splits
-* Explicit preprocessing and augmentation settings
-* Model configurations and hyperparameters
-* Training and evaluation scripts
-* Saved metrics and experiment configurations
-* Instructions for installing dependencies and reproducing results
+## Scope
 
-## Repository Structure
-
-See the project directory structure below.
-
-## Requirements
-
-* Python 3.10 or compatible environment
-* PyTorch
-* torchvision
-* NumPy
-* pandas
-* scikit-learn
-* Pillow
-* Matplotlib
-* Seaborn
-* tqdm
-* psutil
-
-GPU acceleration is recommended but not mandatory.
-
-## Results
-
-Results will be added after all experiments have been completed. No performance values are assumed in advance.
-
-## Limitations
-
-This study uses a small, specialized medical image dataset. Results may depend on the selected label-generation procedure, pretrained weights, random seed, and hardware. Performance on Kvasir-SEG alone does not establish clinical validity or broad generalization to other hospitals or endoscopy systems.
-
-## References
-
-Jha, D. et al., “Kvasir-SEG: A Segmented Polyp Dataset,” in *MultiMedia Modeling*, 2020.
-
-Official dataset: https://datasets.simula.no/kvasir-seg/
-
-## License and Data Usage
-
-Follow the dataset's official terms of use. Cite the original dataset publication in any report or publication using Kvasir-SEG.
+This is an academic image-classification experiment, not a clinically validated diagnostic system.
