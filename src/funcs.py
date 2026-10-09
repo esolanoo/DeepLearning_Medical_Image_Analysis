@@ -21,7 +21,7 @@ OUTPUT_DIR = GLOBAL_DIR + r"data"
 SEED = 5338
 IMAGE_SIZE = 256
 BATCH_SIZE = 32
-NUM_WORKERS = 0 # No popint in using mor than 0 if code is run locally. See below issue
+NUM_WORKERS = 0 # No point in using mor than 0 if code is run locally. See below issue
                 # https://stackoverflow.com/questions/78225920/why-nextitertrain-dataloader-takes-long-execution-time-in-pytorch
 DEVICE = torch.device("cpu") if not torch.cuda.is_available() else torch.device("cuda:0")
 

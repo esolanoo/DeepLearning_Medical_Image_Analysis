@@ -41,8 +41,8 @@ def data_loaders():
 
     for path, label in base_dataset.samples:
         # No try: since we have checked for errors already
-        with Image.open(path) as img:
-            img.verify()
+        #with Image.open(path) as img:
+        #    img.verify()
         records.append({"path": str(path), "label": label, "class_name": base_dataset.classes[label]})
 
     df = pd.DataFrame(records)
@@ -74,4 +74,9 @@ def data_loaders():
     val_loader = DataLoader(val_dataset, shuffle=True, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, pin_memory=cuda)
     test_loader = DataLoader(test_dataset, shuffle=True, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, pin_memory=cuda)
     
-    return train_loader, val_loader, test_loader
+    data = {
+        'datasets': [train_dataset, val_dataset, test_dataset],
+        'loaders': [train_loader, val_loader, test_loader]
+    }
+    
+    return data
