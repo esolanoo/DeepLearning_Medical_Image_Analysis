@@ -8,7 +8,6 @@ from torchvision.datasets import ImageFolder
 from funcs import *
 import warnings
 
-set_env()
 warnings.filterwarnings('ignore')
 
 
@@ -22,7 +21,8 @@ class KvasirDataset(Dataset): # Inherits from torch Datasets
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        with Image.open(row["path"]) as image:
+        p = row['path'].replace("\\", "/")
+        with Image.open(IMAGE_DIR / str(p)) as image:
             image = image.convert("RGB")
 
         if self.transform:
@@ -35,20 +35,9 @@ def data_loaders():
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
     cuda = torch.cuda.is_available()
-    records = []
-    
-    base_dataset = ImageFolder(root=DATA_DIR)
-
-    for path, label in base_dataset.samples:
-        # No try: since we have checked for errors already
-        #with Image.open(path) as img:
-        #    img.verify()
-        records.append({"path": str(path), "label": label, "class_name": base_dataset.classes[label]})
-
-    df = pd.DataFrame(records)
-    
-    train_df, temp_df = train_test_split(df, train_size=0.7,  random_state=SEED, stratify=df["label"])
-    val_df, test_df = train_test_split(temp_df, train_size=0.5, random_state=SEED, stratify=temp_df["label"])
+    train_df = pd.read_csv(TRAIN_CSV)
+    val_df   = pd.read_csv(VAL_CSV)
+    test_df  = pd.read_csv(TEST_CSV)
 
     train_transform = transforms.Compose([
         transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),

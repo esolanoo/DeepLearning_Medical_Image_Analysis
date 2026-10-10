@@ -17,10 +17,17 @@ PATIENCE = 3
 LEARNING_RATE = 1e-3
 NUM_CLASSES = 8
 
+# For local run
 CHECKPOINT_DIR = GLOBAL_DIR + r"src/checkpoints"
 RESULT_DIR = GLOBAL_DIR + r"src/results"
 
-MODELS = ["resnet18", "efficientnet_b0", "vit_b_16"]
+# For Colab
+CHECKPOINT_DIR = PROJECT_DIR / "checkpoints"
+CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+RESULT_DIR = PROJECT_DIR / "results"
+RESULT_DIR.mkdir(parents=True, exist_ok=True)
+
+MODELS = ["resnet18", "efficientnet_b0", "vit_b_16", "small_cnn", "alexnet"]
 
 set_env()
 
@@ -84,7 +91,7 @@ def evaluate(model, loader, criterion):
 
 # ---------------- Training ----------------
 def train_one_model(name):
-    print(f"\nTraining: {name}\n")
+    print(f"\nTraining: {name} for {EPOCHS} epochs\n")
     model = build_model(name, num_classes=NUM_CLASSES).to(DEVICE)
     counts = count_parameters(model)
     print("Parameters:", counts)
@@ -98,7 +105,7 @@ def train_one_model(name):
     best_state = None
     history = []
 
-    if DEVICE == "cuda:0":
+    if DEVICE == "cuda":
         torch.cuda.reset_peak_memory_stats(DEVICE)
         
     start_time = time.perf_counter()
@@ -122,7 +129,7 @@ def train_one_model(name):
             dynamic_ncols=True,
         )
         
-        for images, labels in train_loader:
+        for images, labels in progress_bar:
             images = images.to(DEVICE, non_blocking=True)
             labels = labels.to(DEVICE, non_blocking=True)
             
@@ -141,7 +148,8 @@ def train_one_model(name):
                 avg_loss=f"{running_loss / len(y_train_true):.4f}",
             )
 
-        train_loss = running_loss / 5600
+        progress_bar.close()
+        train_loss = running_loss / len(train_ds)
         train_metrics = calculate_metrics(y_train_true, y_train_pred)
         val_metrics = evaluate(model, val_loader, criterion)
 
@@ -158,7 +166,7 @@ def train_one_model(name):
             "val_mcc": val_metrics["mcc"],
         }
         history.append(row)
-
+        """
         print(
             f"Epoch {epoch:02d}/{EPOCHS} | "
             f"train loss={train_loss:.4f} | "
@@ -168,6 +176,7 @@ def train_one_model(name):
             f"val spec={val_metrics['macro_specificity']:.4f} | "
             f"val MCC={val_metrics['mcc']:.4f}"
         )
+        """
 
         # Select the checkpoint by validation macro-F1.
         if val_metrics["macro_f1"] > best_f1:
@@ -184,7 +193,7 @@ def train_one_model(name):
                     "class_to_idx": train_ds.df[["class_name", "label"]].drop_duplicates().set_index("class_name")["label"].to_dict(),
                     "validation_metrics": val_metrics,
                 },
-                CHECKPOINT_DIR + rf"{name}_best.pth",
+                CHECKPOINT_DIR / f"{name}_best.pth",
             )
         else:
             epochs_without_improvement += 1
@@ -194,9 +203,9 @@ def train_one_model(name):
             break
 
     elapsed = time.perf_counter() - start_time
-    peak_memory_mb = (torch.cuda.max_memory_allocated(DEVICE) / (1024 ** 2) if DEVICE == "cuda:0" else None)
+    peak_memory_mb = (torch.cuda.max_memory_allocated(DEVICE) / (1024 ** 2) if DEVICE == "cuda" else None)
 
-    pd.DataFrame(history).to_csv(RESULT_DIR + rf"{name}_history.csv", index=False)
+    pd.DataFrame(history).to_csv(RESULT_DIR / f"{name}_history.csv", index=False)
 
     summary = {
         "model": name,
@@ -205,19 +214,25 @@ def train_one_model(name):
         "best_epoch": best_epoch,
         "best_val_macro_f1": best_f1,
         "epochs_completed": len(history),
-        "training_seconds": elapsed,
+        "training_seconds": int(elapsed),
         "peak_gpu_memory_mb": peak_memory_mb,
     }
 
     print("Summary:", summary)
+    
     return summary
 
 
 if __name__ == "__main__":
     summaries = []
 
+    assert torch.cuda.is_available(), "GPU unavailable: check Colab runtime settings"
+
+    print("Training device:", DEVICE)
+    print("GPU:", torch.cuda.get_device_name(0))
+
     for model_name in MODELS:
         summaries.append(train_one_model(model_name))
 
-    pd.DataFrame(summaries).to_csv(RESULT_DIR + rf"training_summary.csv", index=False)
+    pd.DataFrame(summaries).to_csv(RESULT_DIR / f"training_summary.csv", index=False)
     print("\nTraining complete. Summary saved to results/")
