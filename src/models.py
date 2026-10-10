@@ -16,8 +16,6 @@ def build_model(name, num_classes=8, pretrained=True):
         model = models.resnet18(weights=weights)
         in_features = model.fc.in_features
         model.fc = nn.Linear(in_features, num_classes)
-
-        # Freeze the backbone; train the classification head.
         for param in model.parameters():
             param.requires_grad = False
         for param in model.fc.parameters():
@@ -48,15 +46,10 @@ def build_model(name, num_classes=8, pretrained=True):
     elif name == "small_cnn":
         return SmallCNN(num_classes=num_classes)
     
-    # Add this branch inside build_model(name, num_classes)
-    if name == "alexnet":
+    elif name == "alexnet":
         model = models.alexnet(weights=models.AlexNet_Weights.DEFAULT)
-
-        # Freeze the pretrained network.
         for param in model.parameters():
             param.requires_grad = False
-
-        # Replace and train only the final classification layer.
         in_features = model.classifier[6].in_features
         model.classifier[6] = nn.Linear(in_features, num_classes)  # type: ignore
 

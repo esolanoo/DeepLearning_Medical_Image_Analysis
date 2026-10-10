@@ -35,6 +35,8 @@ TRAIN_CSV = DATA_DIR / "train.csv"
 VAL_CSV   = DATA_DIR / "val.csv"
 TEST_CSV  = DATA_DIR / "test.csv"
 LOCAL_DATA = Path("/content/kvasir-data")
+CHECKPOINT_DIR = PROJECT_DIR / "src" / "checkpoints"
+OUTPUT_DIR = PROJECT_DIR / "results" / "test_evaluation"
 
 
 SEED = 5338

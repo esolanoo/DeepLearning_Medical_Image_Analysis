@@ -47,3 +47,12 @@ The scratch CNN is not a failure. It achieves 73.09% macro-F1 without pretrained
 One caution: total training time is similar for all four models because even frozen pretrained backbones still perform forward passes through the entire network. The scratch CNN's smaller parameter count does not automatically translate into faster training
 
 note: for a defensible comparison, use ImageNet-pretrained AlexNet with only its final classification layer trained, consistent with your other pretrained models. Reaches 0.7829 before early stopping. It is a historical architecture, but its 57M parameters make it relatively large for this performance. Since it ran for fewer epochs, treat its result as an initial baseline rather than a definitive ranking.
+
+
+====================================================================
+Evaluating small_cnn
+Accuracy:           0.7483
+Macro-F1:           0.7447
+Macro-specificity:  0.9640
+MCC:                0.7160
+Inference time:     141.02 s (117.52 ms/image)

@@ -1,0 +1,50 @@
+[
+  {
+    "model": "small_cnn",
+    "test_samples": 1200,
+    "accuracy": 0.7483333333333333,
+    "macro_f1": 0.7446993539165927,
+    "macro_specificity": 0.964047619047619,
+    "mcc": 0.7159669261820152,
+    "inference_seconds": 147.20740231199989,
+    "ms_per_image": 122.6728352599999,
+    "checkpoint_epoch": 10,
+    "validation_macro_f1": 0.7309173364535161
+  },
+  {
+    "model": "resnet18",
+    "test_samples": 1200,
+    "accuracy": 0.8666666666666667,
+    "macro_f1": 0.8662169741280074,
+    "macro_specificity": 0.980952380952381,
+    "mcc": 0.8484126172176805,
+    "inference_seconds": 167.2765960239999,
+    "ms_per_image": 139.39716335333327,
+    "checkpoint_epoch": 7,
+    "validation_macro_f1": 0.8626412862285235
+  },
+  {
+    "model": "vit_b_16",
+    "test_samples": 1200,
+    "accuracy": 0.9058333333333334,
+    "macro_f1": 0.905639319800301,
+    "macro_specificity": 0.986547619047619,
+    "mcc": 0.8927452100565824,
+    "inference_seconds": 1077.5224336710003,
+    "ms_per_image": 897.9353613925001,
+    "checkpoint_epoch": 10,
+    "validation_macro_f1": 0.9045652516387329
+  },
+  {
+    "model": "efficientnet_b0",
+    "test_samples": 1200,
+    "accuracy": 0.8866666666666667,
+    "macro_f1": 0.8850554817978078,
+    "macro_specificity": 0.9838095238095237,
+    "mcc": 0.8726111591818757,
+    "inference_seconds": 153.6690770590003,
+    "ms_per_image": 128.05756421583357,
+    "checkpoint_epoch": 8,
+    "validation_macro_f1": 0.8797663253799102
+  }
+]
