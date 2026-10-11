@@ -1,0 +1,7 @@
+model,total_parameters,trainable_parameters,best_epoch,best_val_macro_f1,epochs_completed,training_seconds
+resnet18,11180616,4104,10,0.868076079,10,1297
+efficientnet_b0,4017796,10248,9,0.890065967,10,1223
+vit_b_16,85804808,6152,7,0.902163155,10,2474
+alexnet,57036616,32776,8,0.804681967,10,1258
+small_cnn,390952,390952,33,0.839721517,38,4991
+efficientnet_b0_scratch,4017796,4017796,38,0.883605139,43,6663

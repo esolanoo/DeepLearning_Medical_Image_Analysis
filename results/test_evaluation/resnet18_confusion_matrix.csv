@@ -1,0 +1,9 @@
+,pred_dyed-lifted-polyps,pred_dyed-resection-margins,pred_esophagitis,pred_normal-cecum,pred_normal-pylorus,pred_normal-z-line,pred_polyps,pred_ulcerative-colitis
+true_dyed-lifted-polyps,126,21,0,0,0,0,3,0
+true_dyed-resection-margins,27,122,0,0,0,0,0,1
+true_esophagitis,0,0,107,0,4,38,1,0
+true_normal-cecum,0,0,0,139,0,0,9,2
+true_normal-pylorus,0,0,1,0,146,3,0,0
+true_normal-z-line,0,0,18,0,6,125,1,0
+true_polyps,4,0,0,4,3,0,139,0
+true_ulcerative-colitis,2,0,0,4,0,0,16,128

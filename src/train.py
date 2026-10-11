@@ -13,23 +13,9 @@ from models import build_model, count_parameters
 
 
 EPOCHS = 10
-PATIENCE = 3
+PATIENCE = 5
 LEARNING_RATE = 1e-3
 NUM_CLASSES = 8
-
-# For local run
-CHECKPOINT_DIR = GLOBAL_DIR + r"src/checkpoints"
-RESULT_DIR = GLOBAL_DIR + r"src/results"
-
-# For Colab
-CHECKPOINT_DIR = PROJECT_DIR / "checkpoints"
-CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
-RESULT_DIR = PROJECT_DIR / "results"
-RESULT_DIR.mkdir(parents=True, exist_ok=True)
-
-MODELS = ["resnet18", "efficientnet_b0", "vit_b_16", "small_cnn", "alexnet"]
-
-set_env()
 
 # ---------------- Data ----------------
 data = data_loaders()
@@ -97,8 +83,17 @@ def train_one_model(name):
     print("Parameters:", counts)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=LEARNING_RATE, weight_decay=1e-4,)
+    optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-3, weight_decay=1e-4,)
 
+    # Dynamic lr!!!
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="max",       # We want validation macro-F1 to increase
+        factor=0.5,       # Reduce LR by half
+        patience=2,       # Wait 2 epochs without improvement
+        threshold=1e-3,
+        min_lr=1e-6,
+    )
     best_f1 = -1.0
     best_epoch = 0
     epochs_without_improvement = 0
@@ -112,7 +107,6 @@ def train_one_model(name):
 
     for epoch in range(1, EPOCHS + 1):
         model.train()
-        # Keep frozen CNN BatchNorm layers in evaluation mode.
         # This avoids updating running statistics in frozen backbones.
         for module in model.modules():
             if isinstance(module, nn.modules.batchnorm._BatchNorm):
@@ -166,17 +160,9 @@ def train_one_model(name):
             "val_mcc": val_metrics["mcc"],
         }
         history.append(row)
-        """
-        print(
-            f"Epoch {epoch:02d}/{EPOCHS} | "
-            f"train loss={train_loss:.4f} | "
-            f"val loss={val_metrics['loss']:.4f} | "
-            f"val acc={val_metrics['accuracy']:.4f} | "
-            f"val F1={val_metrics['macro_f1']:.4f} | "
-            f"val spec={val_metrics['macro_specificity']:.4f} | "
-            f"val MCC={val_metrics['mcc']:.4f}"
-        )
-        """
+        
+        # Dynamic lr!!!
+        scheduler.step(val_metrics["macro_f1"])
 
         # Select the checkpoint by validation macro-F1.
         if val_metrics["macro_f1"] > best_f1:
@@ -201,7 +187,7 @@ def train_one_model(name):
         if epochs_without_improvement >= PATIENCE:
             print("Early stopping.")
             break
-
+        
     elapsed = time.perf_counter() - start_time
     peak_memory_mb = (torch.cuda.max_memory_allocated(DEVICE) / (1024 ** 2) if DEVICE == "cuda" else None)
 
@@ -224,13 +210,32 @@ def train_one_model(name):
 
 
 if __name__ == "__main__":
+    set_env()
     summaries = []
 
     assert torch.cuda.is_available(), "GPU unavailable: check Colab runtime settings"
-
     print("Training device:", DEVICE)
     print("GPU:", torch.cuda.get_device_name(0))
+    choice = ""
+    while not (choice=='y' or choice=='n'): 
+        choice = input(f"Run all models ({MODELS})? [y/n]: ")
+    if choice == 'n':
+        m = []
+        for model in MODELS:
+            choice = input(f"Run {model}? [y/n]: ")
+            if choice == 'y':
+                m.append(model)
+        MODELS = m
+    choice = ""
+    while not (choice=='y' or choice=='n'): 
+            choice = input(f"Run pretrained models? [y/n]: ")                            
+    if choice=='n':
+        MODELS = [model+"_scratch" for model in MODELS]
+        PRETRAINED = False
+        EPOCHS = 50
 
+    print(f"Begin training of {'pretrained' if PRETRAINED else 'scratch'} models ({MODELS})...")
+            
     for model_name in MODELS:
         summaries.append(train_one_model(model_name))
 

@@ -2,49 +2,59 @@ import torch.nn as nn
 from torchvision import models
 import torch
 
+from funcs import *
 
-def build_model(name, num_classes=8, pretrained=True):
+
+def build_model(name, num_classes=8):
     """
-    Create a pretrained image classifier with a replaceable head.
+    Create an image classifier with a replaceable head.
     Supported models:
         resnet18
         efficientnet_b0
         vit_b_16
+        alexnet
+        small cnn (locally built, not pre-trained)
     """
+    pretrained = True
+    if "_scratch" in name:
+        name = name.replace("_scratch", "")
+        pretrained = False
+        
     if name == "resnet18":
         weights = (models.ResNet18_Weights.DEFAULT if pretrained else None)
         model = models.resnet18(weights=weights)
         in_features = model.fc.in_features
         model.fc = nn.Linear(in_features, num_classes)
-        for param in model.parameters():
-            param.requires_grad = False
-        for param in model.fc.parameters():
-            param.requires_grad = True
+        # Freeze only when using pretrained feature extraction
+        if pretrained:
+            for param in model.parameters():
+                param.requires_grad = False
+            for param in model.fc.parameters():
+                param.requires_grad = True
 
     elif name == "efficientnet_b0":
         weights = (models.EfficientNet_B0_Weights.DEFAULT if pretrained else None)
         model = models.efficientnet_b0(weights=weights)
         in_features = model.classifier[1].in_features
         model.classifier[1] = nn.Linear(in_features, num_classes) # type: ignore
-
-        for param in model.parameters():
-            param.requires_grad = False
-        for param in model.classifier.parameters():
-            param.requires_grad = True
+    # Freeze only when using pretrained feature extraction
+        if pretrained:
+            for param in model.parameters():
+                param.requires_grad = False
+            for param in model.classifier.parameters():
+                param.requires_grad = True
 
     elif name == "vit_b_16":
         weights = ( models.ViT_B_16_Weights.DEFAULT if pretrained else None)
         model = models.vit_b_16(weights=weights)
         in_features = model.heads.head.in_features # type: ignore
         model.heads.head = nn.Linear(in_features, num_classes) # type: ignore
-
-        for param in model.parameters():
-            param.requires_grad = False
-        for param in model.heads.parameters():
-            param.requires_grad = True
-            
-    elif name == "small_cnn":
-        return SmallCNN(num_classes=num_classes)
+        # Freeze only when using pretrained feature extraction
+        if PRETRAINED:
+            for param in model.parameters():
+                param.requires_grad = False
+            for param in model.heads.parameters():
+                param.requires_grad = True
     
     elif name == "alexnet":
         model = models.alexnet(weights=models.AlexNet_Weights.DEFAULT)
@@ -52,12 +62,13 @@ def build_model(name, num_classes=8, pretrained=True):
             param.requires_grad = False
         in_features = model.classifier[6].in_features
         model.classifier[6] = nn.Linear(in_features, num_classes)  # type: ignore
-
-        return model
+     
+    elif name == "small_cnn":
+        return SmallCNN(num_classes=num_classes)  
     
     else:
         raise ValueError(f"Unsupported model (yet): {name}")
-
+        
     return model
 
 

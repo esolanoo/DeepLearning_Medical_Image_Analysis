@@ -1,9 +1,7 @@
 import pandas as pd
 from PIL import Image
-from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
-from torchvision.datasets import ImageFolder
 
 from funcs import *
 import warnings
@@ -60,8 +58,8 @@ def data_loaders():
     test_dataset = KvasirDataset(test_df, eval_transform)
     
     train_loader = DataLoader(train_dataset, shuffle=True, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, pin_memory=cuda)
-    val_loader = DataLoader(val_dataset, shuffle=True, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, pin_memory=cuda)
-    test_loader = DataLoader(test_dataset, shuffle=True, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, pin_memory=cuda)
+    val_loader = DataLoader(val_dataset, shuffle=False, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, pin_memory=cuda)
+    test_loader = DataLoader(test_dataset, shuffle=False, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, pin_memory=cuda)
     
     data = {
         'datasets': [train_dataset, val_dataset, test_dataset],

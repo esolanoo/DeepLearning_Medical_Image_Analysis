@@ -1,22 +1,10 @@
 from __future__ import annotations
 import json
-import sys
 import time
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import torch
-from PIL import Image
-from sklearn.metrics import (
-    accuracy_score,
-    classification_report,
-    confusion_matrix,
-    f1_score,
-    matthews_corrcoef,
-)
-from torch.utils.data import DataLoader, Dataset
-from torchvision import transforms
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, matthews_corrcoef
 
 from funcs import *
 from preprocessing import data_loaders
@@ -27,15 +15,9 @@ MODEL_CHECKPOINTS = {
     "resnet18": CHECKPOINT_DIR / "resnet18_best.pth",
     "vit_b_16": CHECKPOINT_DIR / "vit_b_16_best.pth",
     "efficientnet_b0": CHECKPOINT_DIR / "efficientnet_b0_best.pth",
+    "alexnet": CHECKPOINT_DIR / "alexnet_best.pth",
+    "efficientnet_b0_scratch": CHECKPOINT_DIR / "efficientnet_b0_scratch_best.pth",
 }
-
-SRC_DIR = PROJECT_DIR / "src"
-# -------------------------- Project imports ---------------------------
-
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
-# ------------------------------ Metrics -------------------------------
 
 def macro_specificity(y_true, y_pred, num_classes):
     """Mean one-vs-rest specificity across all classes."""
@@ -55,7 +37,6 @@ def macro_specificity(y_true, y_pred, num_classes):
 
 
 def load_checkpoint(path):
-    # These are the user's own saved checkpoints, with model state and metadata.
     try:
         return torch.load(path, map_location=DEVICE, weights_only=False)
     except TypeError:  # Compatibility with older PyTorch versions.
@@ -108,9 +89,7 @@ def get_num_classes_and_names(test_dataset, checkpoint):
 # -------------------------------- Main --------------------------------
 
 def main():
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    # The existing data_loaders() returns datasets/loaders in train, val, test order.
+    set_env()
     data = data_loaders()
     train_dataset, val_dataset, test_dataset = data["datasets"]
     train_loader, val_loader, original_test_loader = data["loaders"]
