@@ -17,6 +17,7 @@ MODEL_CHECKPOINTS = {
     "efficientnet_b0": CHECKPOINT_DIR / "efficientnet_b0_best.pth",
     "alexnet": CHECKPOINT_DIR / "alexnet_best.pth",
     "efficientnet_b0_scratch": CHECKPOINT_DIR / "efficientnet_b0_scratch_best.pth",
+    "efficientnet_b0_finetuned": CHECKPOINT_DIR / "efficientnet_b0_finetuned_best.pth",
 }
 
 def macro_specificity(y_true, y_pred, num_classes):
@@ -91,8 +92,8 @@ def get_num_classes_and_names(test_dataset, checkpoint):
 def main():
     set_env()
     data = data_loaders()
-    train_dataset, val_dataset, test_dataset = data["datasets"]
-    train_loader, val_loader, original_test_loader = data["loaders"]
+    _, _, test_dataset = data["datasets"]
+    _, _, test_loader = data["loaders"]
 
     # Rebuild the test loader with shuffle=False to preserve prediction order.
     # Reuse the dataset object, which already applies the project's eval_transform.
@@ -101,16 +102,14 @@ def main():
     # Reuse settings from the existing loader where possible.
     test_loader = DataLoader(
         test_dataset,
-        batch_size=original_test_loader.batch_size or 32,
+        batch_size=test_loader.batch_size or 32,
         shuffle=False,
-        num_workers=original_test_loader.num_workers,
+        num_workers=test_loader.num_workers,
         pin_memory=False,
     )
 
     # Check that the test labels cover the expected 8 classes.
     test_df = test_dataset.df
-    if "label" not in test_df.columns:
-        raise ValueError("Expected integer 'label' column in test.csv.")
     print(f"Test samples: {len(test_dataset)}")
     print(f"Test label counts:\n{test_df['label'].value_counts().sort_index()}")
     print(f"Evaluation device: {DEVICE}")
@@ -124,9 +123,7 @@ def main():
     if reference is None:
         raise FileNotFoundError(f"No checkpoints found in {CHECKPOINT_DIR}")
 
-    num_classes, class_names, class_to_idx = get_num_classes_and_names(
-        test_dataset, reference
-    )
+    num_classes, class_names, class_to_idx = get_num_classes_and_names(test_dataset, reference)
     print(f"Classes ({num_classes}): {class_names}")
 
     # Ensure labels are in the expected range.
@@ -147,9 +144,7 @@ def main():
             continue
 
         checkpoint = load_checkpoint(checkpoint_path)
-        state_dict = checkpoint.get(
-            "model_state_dict", checkpoint.get("state_dict")
-        )
+        state_dict = checkpoint.get("model_state_dict", checkpoint.get("state_dict"))
         if state_dict is None:
             raise KeyError(
                 f"No model_state_dict/state_dict in {checkpoint_path}. "

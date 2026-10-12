@@ -27,18 +27,21 @@
 **How much does ImageNet pretraining improve gastrointestinal image classification when labeled training data are limited, and how do architecture, model complexity, and interpretability affect the results?**
 
 RQ1 — Does pretraining help with limited labeled data?
-Compare pretrained ResNet-18 with the same architecture initialized randomly. Train both using, for example, 10%, 25%, 50%, and 100% of the training set, keeping the validation and test sets fixed.
+Compare pretrained vs randomly initialized weights vs pretrained-finetuned
 
-RQ2 — Which architectures offer the best trade-off?
-Compare ResNet-18, EfficientNet-B0, ViT-B/16, your scratch CNN, and optionally MaxViT-Tiny. Report macro-F1, MCC, parameter counts, training time, and inference latency.
+RQ2 - What trade-offs exist between predictive performance and computational cost?
+Compare macro-F1, inference latency, parameter counts, training time, and convergence across the four architectures.
 
-RQ3 — What image regions influence the predictions?
-Use Grad-CAM for the CNN models and attention-based visualization for ViT or MaxViT. Compare correct predictions with misclassified images and assess whether the models focus on relevant lesion regions or misleading background features.
+RQ3 - How do model errors and visual explanations differ across architectures?
+Examine per-class errors and use Grad-CAM for CNNs and suitable attention visualization for ViT-B/16. Treat these visualizations as diagnostic evidence, not proof that the model's reasoning is clinically valid.
+
+### Dataset
+
 
 ### Methodology 
 | Setting              | Recommended approach                                                   |
 | -------------------- | ---------------------------------------------------------------------- |
-| Dataset split        | 5,600 / 1,200 / 1,200 split                          |
+| Dataset split        | 5,600 / 1,200 / 1,200 split                                            |
 | Input resolution     | 224 × 224 for all models                                               |
 | Batch size           | Start at 16 or 32; reduce if CUDA runs out of memory                   |
 | Pretrained models    | 10 epochs maximum, early stopping                                      |
@@ -47,18 +50,33 @@ Use Grad-CAM for the CNN models and attention-based visualization for ViT or Max
 | Test set             | Evaluate only after the experimental decisions are finalized           |
 | Randomness           | Fix seeds and record them                                              |
 | Reporting            | Record epochs completed, training time, parameter count, and GPU model |
+| Evaluation           | Accuracy, macro_f1, macro_specificity, matthews correlation coeficient, inference_seconds, ms_per_image, validation_macro_f1 |
+
+### Models
+
+| model                     | model_description                                                                                                      | total_parameters         | trainable_parameters               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------ | ---------------------------------- |
+| resnet18                  | Pre-trained CNN. Residual connections help optimize deeper networks                                                    |            11,180,616    |                              4,104 |
+| efficientnet_b0           | Pre-trained CNN. Balances network depth, width, and input resolution to improve efficiency.                            |               4,017,796  |                            10,248  |
+| vit_b_16                  | Pre-trained Transformer. A straightforward global-attention baseline                                                   |            85,804,808    |                              6,152 |
+| alexnet                   | Historical CNN baseline                                                                                                |            57,036,616    |                            32,776  |
+| small_cnn                 | Locally-built, light-weight CNN.                                                                                       |                  390,952 |                          390,952   |
+| efficientnet_b0_scratch   | EfficientNet with randomly assigned weights and backbone freeze                                                        |               4,017,796  |                      4,017,796     |
+| efficientnet_b0_finetuned | Fine-tuned from already-trained pretrained  \`efficientnet_b0\` checkpoint, sequential continuation of that experiment |               4,017,796  |                      4,017,796     |
+
 
 
 ### Train results
 
-| model                   | total_parameters | trainable_parameters | best_epoch | best_val_macro_f1 | epochs_completed | training_seconds |
-| ----------------------- | ---------------- | -------------------- | ---------- | ----------------- | ---------------- | ---------------- |
-| vit_b_16                | 85804808         | 6152                 | 7          | 0.902163          | 10               | 2474             |
-| efficientnet_b0         | 4017796          | 10248                | 9          | 0.890066          | 10               | 1223             |
-| efficientnet_b0_scratch | 4017796          | 4017796              | 38         | 0.883605          | 43               | 6663             |
-| resnet18                | 11180616         | 4104                 | 10         | 0.868076          | 10               | 1297             |
-| small_cnn               | 390952           | 390952               | 33         | 0.839722          | 38               | 4991             |
-| alexnet                 | 57036616         | 32776                | 8          | 0.804682          | 10               | 1258             | |
+| model                     | total_parameters | trainable_parameters | best_epoch | best_val_macro_f1 | epochs_completed | training_seconds |
+| ------------------------- | ---------------- | -------------------- | ---------- | ----------------- | ---------------- | ---------------- |
+| efficientnet_b8_finetuned | 4017796          | 4017796              | 25         | 0.914842          | 25               | 3940             |
+| vit_b_16                  | 85804808         | 6152                 | 7          | 0.902163          | 10               | 2474             |
+| efficientnet_b0           | 4017796          | 10248                | 9          | 0.890066          | 10               | 1223             |
+| efficientnet_b0_scratch   | 4017796          | 4017796              | 38         | 0.883605          | 43               | 6663             |
+| resnet18                  | 11180616         | 4104                 | 10         | 0.868076          | 10               | 1297             |
+| small_cnn                 | 390952           | 390952               | 33         | 0.839722          | 38               | 4991             |
+| alexnet                   | 57036616         | 32776                | 8          | 0.804682          | 10               | 1258             |
 
 ### Initial Findings
 

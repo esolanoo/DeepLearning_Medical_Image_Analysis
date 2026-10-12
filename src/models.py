@@ -19,6 +19,8 @@ def build_model(name, num_classes=8):
     if "_scratch" in name:
         name = name.replace("_scratch", "")
         pretrained = False
+    if "_finetuned" in name:
+        name = name.replace("_finetuned", '')
         
     if name == "resnet18":
         weights = (models.ResNet18_Weights.DEFAULT if pretrained else None)

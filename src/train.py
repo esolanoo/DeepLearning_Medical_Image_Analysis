@@ -5,8 +5,9 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from tqdm.auto import tqdm
-from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score, matthews_corrcoef)
-
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, matthews_corrcoef
+from torch.optim import AdamW
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from funcs import *
 from preprocessing import data_loaders
 from models import build_model, count_parameters
@@ -116,12 +117,7 @@ def train_one_model(name):
         running_loss = 0.0
         y_train_true, y_train_pred = [], []
     
-        progress_bar = tqdm(
-            train_loader,
-            desc=f"Epoch {epoch}/{EPOCHS}",
-            unit="batch",
-            dynamic_ncols=True,
-        )
+        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch}/{EPOCHS}", unit="batch", dynamic_ncols=True)
         
         for images, labels in progress_bar:
             images = images.to(DEVICE, non_blocking=True)
@@ -137,10 +133,146 @@ def train_one_model(name):
             y_train_true.extend(labels.detach().cpu().tolist())
             y_train_pred.extend(logits.detach().argmax(dim=1).cpu().tolist())
             
-            progress_bar.set_postfix(
-                loss=f"{loss.item():.4f}",
-                avg_loss=f"{running_loss / len(y_train_true):.4f}",
+            progress_bar.set_postfix(loss=f"{loss.item():.4f}", avg_loss=f"{running_loss / len(y_train_true):.4f}")
+
+        progress_bar.close()
+        train_loss = running_loss / len(train_ds)
+        train_metrics = calculate_metrics(y_train_true, y_train_pred)
+        val_metrics = evaluate(model, val_loader, criterion)
+
+        row = {
+            "model": name,
+            "epoch": epoch,
+            "train_loss": train_loss,
+            "train_accuracy": train_metrics["accuracy"],
+            "train_macro_f1": train_metrics["macro_f1"],
+            "val_loss": val_metrics["loss"],
+            "val_accuracy": val_metrics["accuracy"],
+            "val_macro_f1": val_metrics["macro_f1"],
+            "val_macro_specificity": val_metrics["macro_specificity"],
+            "val_mcc": val_metrics["mcc"],
+        }
+        history.append(row)
+        
+        # Dynamic lr!!!
+        scheduler.step(val_metrics["macro_f1"])
+
+        # Select the checkpoint by validation macro-F1.
+        if val_metrics["macro_f1"] > best_f1:
+            best_f1 = val_metrics["macro_f1"]
+            best_epoch = epoch
+            best_state = copy.deepcopy(model.state_dict())
+            epochs_without_improvement = 0
+
+            torch.save(
+                {
+                    "model_name": name,
+                    "epoch": epoch,
+                    "model_state_dict": best_state,
+                    "class_to_idx": train_ds.df[["class_name", "label"]].drop_duplicates().set_index("class_name")["label"].to_dict(),
+                    "validation_metrics": val_metrics,
+                },
+                CHECKPOINT_DIR / f"{name}_best.pth",
             )
+        else:
+            epochs_without_improvement += 1
+
+        if epochs_without_improvement >= PATIENCE:
+            print("Early stopping.")
+            break
+        
+    elapsed = time.perf_counter() - start_time
+    peak_memory_mb = (torch.cuda.max_memory_allocated(DEVICE) / (1024 ** 2) if DEVICE == "cuda" else None)
+
+    pd.DataFrame(history).to_csv(RESULT_DIR / f"{name}_history.csv", index=False)
+
+    summary = {
+        "model": name,
+        "total_parameters": counts["total"],
+        "trainable_parameters": counts["trainable"],
+        "best_epoch": best_epoch,
+        "best_val_macro_f1": best_f1,
+        "epochs_completed": len(history),
+        "training_seconds": int(elapsed),
+        "peak_gpu_memory_mb": peak_memory_mb,
+    }
+
+    print("Summary:", summary)
+    
+    return summary
+
+
+# ---------------- Fine-tune EfficientNet ----------------
+def fine_tune_efficientnet(epochs=25):
+    
+    name = "efficientnet_b0_finetuned"
+    checkpoint_path= CHECKPOINT_DIR / "efficientnet_b0_best.pth"
+
+    # 2. Load pretrained architecture
+    model = build_model("efficientnet_b0", num_classes=NUM_CLASSES).to(DEVICE)
+    checkpoint_path = Path(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location=DEVICE, weights_only=False)
+    state_dict = checkpoint.get("model_state_dict", checkpoint.get("state_dict"))
+    model.load_state_dict(state_dict)
+
+    # 4. Unfreeze the entire network
+    for param in model.parameters():
+        param.requires_grad = True
+    counts = count_parameters(model)
+    print("Parameters:", counts)
+
+    # 5. Optimizer: smaller LR for the backbone, larger LR for the head
+    optimizer = AdamW(
+        [
+            {"params": [p for name, p in model.named_parameters() if not name.startswith("classifier.")], "lr": 1e-5},
+            {"params": model.classifier.parameters(), "lr": 1e-4}, # type: ignore
+        ],
+        weight_decay=1e-4,
+    )
+
+    criterion = nn.CrossEntropyLoss()
+    scheduler = ReduceLROnPlateau(
+        optimizer,
+        mode="max",
+        factor=0.5,
+        patience=2,
+        threshold=1e-3,
+        min_lr=1e-7,
+    )
+
+    best_f1 = -1.0
+    best_epoch = 0
+    epochs_without_improvement = 0
+    best_state = None
+    history = []
+    
+    if DEVICE == "cuda":
+            torch.cuda.reset_peak_memory_stats(DEVICE)
+            
+    start_time = time.perf_counter()
+
+    for epoch in range(1, epochs + 1):
+        model.train()
+        running_loss = 0.0
+        y_train_true, y_train_pred = [], []
+    
+        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", unit="batch", dynamic_ncols=True)
+        
+        for images, labels in progress_bar:
+            images = images.to(DEVICE, non_blocking=True)
+            labels = labels.to(DEVICE, non_blocking=True)
+            
+            optimizer.zero_grad(set_to_none=True)
+            logits = model(images)
+            loss = criterion(logits, labels)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item() * labels.size(0)
+            y_train_true.extend(labels.detach().cpu().tolist())
+            y_train_pred.extend(logits.detach().argmax(dim=1).cpu().tolist())
+            
+            progress_bar.set_postfix(loss=f"{loss.item():.4f}", avg_loss=f"{running_loss / len(y_train_true):.4f}")
 
         progress_bar.close()
         train_loss = running_loss / len(train_ds)
@@ -213,7 +345,7 @@ if __name__ == "__main__":
     set_env()
     summaries = []
 
-    assert torch.cuda.is_available(), "GPU unavailable: check Colab runtime settings"
+    assert torch.cuda.is_available(), "GPU unavailable"
     print("Training device:", DEVICE)
     print("GPU:", torch.cuda.get_device_name(0))
     choice = ""
@@ -238,6 +370,8 @@ if __name__ == "__main__":
             
     for model_name in MODELS:
         summaries.append(train_one_model(model_name))
+
+    summaries.append(fine_tune_efficientnet())
 
     pd.DataFrame(summaries).to_csv(RESULT_DIR / f"training_summary.csv", index=False)
     print("\nTraining complete. Summary saved to results/")

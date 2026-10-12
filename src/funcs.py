@@ -20,7 +20,7 @@ global PRETRAINED
 
 # Paths
 PROJECT_DIR = Path(r"D:\Documentos\UP\MIACD\DeepLearning_Medical_Image_Analysis")
-DATA_DIR = Path(r"C:\Users\Eduardo\Datasets")
+DATA_DIR = Path(r"C:\Users\Eduardo\Datasets") # SSD drive
 IMAGE_DIR = DATA_DIR / "data"
 OUTPUT_DIR = PROJECT_DIR / "data"
 TRAIN_CSV = IMAGE_DIR / "train.csv"
