@@ -1,0 +1,452 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[export]{adjustbox}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Small Models, Smart Choices: A Comparative Study of Deep Learning for Gastrointestinal Image Classification\\
+}
+
+\author{\IEEEauthorblockN{E. Solano}
+\IEEEauthorblockA{MSc Data Science and Artificial Intelligence} \\
+\textit{Universidad Panamericana}\\
+Aguascalientes, Mexico \\
+0213663@up.edu.mx}
+
+
+\maketitle
+
+\begin{abstract}
+This study evaluates the trade-off between classification performance and computational efficiency across deep learning architectures for gastrointestinal image classification using Kvasir-v2. Pretrained CNNs, a Vision Transformer, and a lightweight CNN trained from scratch are compared using predictive metrics, model size, and inference latency. EfficientNet-B0 is further evaluated under different training strategies to assess the benefits of transfer learning and fine-tuning. Results highlight the potential of efficient architectures to balance predictive performance and computational cost.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Computational efficiency, lightweight deep learning, image classification, transfer learning, convolutional neural networks.
+\end{IEEEkeywords}
+
+\section{Introduction and Motivation}
+Recent advances in deep learning and GPU computing have made image classification more accessible, including in medical imaging. However, high-performing models can require substantial computational resources, and their results depend on factors such as dataset size, model initialization, and training strategy. These considerations are relevant to gastrointestinal endoscopy, where images contain diverse anatomical structures, pathological findings, and procedure-related features.
+
+Deep learning has become a major approach for gastrointestinal endoscopic image classification, with convolutional neural networks (CNNs) serving as a common baseline because they learn hierarchical visual features such as edges, textures, and anatomical patterns directly from images. Some studies support CNNs as effective baselines, but results depend on the dataset version, split strategy, preprocessing, and evaluation protocol
+
+The literature on medical image segmentation commonly uses encoder-decoder CNNs, residual networks, and increasingly more Transformer-based or hybrid architectures. Each represents a different approach to extracting and combining visual information. But CNNs and Vision Transformers are two major approaches in medical image analysis 
+
+A plenary of research has been done in this area, but few research efforts have been done with smaller resources - meaning small datasets and not top-notch computational resources -, which account for the vast majority of common user in the area.
+
+The goal of this paper is to provide a holistic and meaningful comparison of the use of different classifiers ranging from pre-trained models included in Pytorch, randomly-initialized Pytocrch models, and a small locally-build CNN. The aim is to compare results and computational costs to arrive at a conclusion on the efficiency of light-weight and pretrained models with limited data.
+
+This study compares pretrained CNN architectures, a Vision Transformer (ViT), and a lightweight CNN trained from scratch on the same Kvasir-v2 classification task. In addition, pretrained and randomly initialized EfficientNet-B0 models are evaluated to investigate the effect of initialization. Predictive performance is assessed alongside inference latency, parameter counts, and training behavior. The objective is not to propose a new architecture, but to provide a reproducible comparison relevant to experiments conducted with limited computational resources.
+
+\subsection{Research questions}
+
+\begin{itemize}
+\item \textbf{RQ1} - How does pretraining affect gastrointestinal image classification?
+\item \textbf{RQ2} - What trade-offs exist between predictive performance and computational cost?
+\item \textbf{RQ3} - How do model errors and visual explanations differ across architectures?
+\end{itemize}
+
+\subsection{Code Availability}
+The source code used for data preprocessing, model training, evaluation,
+and computational benchmarking is available at:
+\url{https://github.com/esolanoo/DeepLearning_Medical_Image_Analysis}.
+
+\section{State of the Art}
+Deep learning has become a widely used approach for gastrointestinal endoscopic image classification. Convolutional neural networks (CNNs) learn hierarchical visual features and consistently achieve promising results on datasets such as Kvasir-v2. Previous studies have evaluated architectures including ResNet, DenseNet, and Xception using ImageNet transfer learning to improve performance. While freezing the backbones of the models reduces computational cost, fine-tuning can better adapt learned features to the target domain. However, comparisons across studies are complicated by differences in dataset splits, augmentation, training strategies, and evaluation metrics.
+
+Despite these developments, architecture comparisons are difficult to interpret when studies use different datasets, data splits, augmentation policies, or evaluation metrics. Transfer learning also introduces an important distinction: a frozen pretrained backbone uses previously learned features, whereas fine-tuning allows those features to adapt to the target dataset. This study addresses these factors through a shared dataset split and evaluation procedure, while comparing both predictive performance and computational cost. Visual explanation methods such as Grad-CAM can further help inspect which image regions influence CNN predictions, although these maps do not establish clinical validity.
+
+Vision Transformers (ViTs) provide an alternative to CNNs by using self-attention to model relationships between image patches, potentially capturing broader contextual information. Nevertheless, they often benefit from large-scale pretraining when labeled datasets are limited.
+
+Efficient architectures such as EfficientNet balance model depth, width, and input resolution to improve the trade-off between predictive performance and computational cost. Lightweight CNNs offer a useful comparison in settings with limited computing resources, although their performance may be constrained by training data and model capacity.
+
+\section{Materials and methodology}
+
+\begin{table}[htbp]
+\caption{Initial project's settings}
+\begin{center}
+\begin{tabular}{|m{8em}|m{15em}|}
+\hline
+\textbf{Setting}&\textit{Initial choice}\\
+\hline
+    Task & Multi-class polyp classification \\
+    \hline
+    Dataset & Kvasir, (8 classes)*1,000 images \\
+    \hline
+    Split & 75 train, 15 validation, 15 test \\
+    \hline
+    Random seed & 5338 \\
+    \hline
+    Input resolution & 224 × 224 \\
+    \hline
+    Image format & RGB \\
+    \hline
+    Image normalization & ImageNet mean and standard deviation \\
+    \hline
+    Training augmentation & Horizontal flips, small rotations, jitter on train \\
+    \hline
+    Validation/test augmentation & NaN \\
+    \hline
+    Initial loss & CrossEntropyLoss \\
+\hline
+\end{tabular}
+\label{tables:tab1}
+\end{center}
+\end{table}
+
+\subsection{Dataset: Kvasir-v2}
+
+Multi-Class Image-Dataset for Computer Aided Gastrointestinal Disease Detection from the Vestre Viken Health Trust (Norway) containing not only polyps and other findings, two classes related to polyp removal and three anatomical landmarks in the GI tract. The dataset consists of images, annotated and verified by medical doctors, including several classes showing anatomical landmarks, pathological findings or endoscopic procedures in the GI tract.
+
+Dataset includes 8,000 images spread evenly across its 8 classes (\textit{esophagitis, ulcerative-colitis, dyed-lifted-polyps, normal-pylorus, normal-cecum, normal-z-line, polyps, dyed-resection-margins}). Which were later split into 75-15-15 train-validation-test datasets with even balance of classes resulting in sets sizes of 5,600 for training and 1,200 for test and validation
+
+Kvasir-v2 contains eight balanced categories representing anatomical landmarks, inflammatory conditions, polyps, and endoscopic treatment findings. This diversity makes the task a multi-class classification problem rather than a binary distinction between normal and abnormal images. Because some categories may share visual characteristics, overall accuracy alone may not fully describe model behavior. Macro-averaged metrics are therefore included to give each class equal weight in the evaluation.
+
+\begin{figure}[h]
+\includegraphics[width=0.44\textwidth, inner]{DataSplit_ClassDistribution.png}
+\caption{Data Split and Class Distribution}
+\label{fig:figure1}
+\end{figure}
+
+Each image was later converted to RGB resized to 224*224, and finally normalized (using the ImageNet standard values for each, `mean = [0.485, 0.456, 0.406]` and `std = [0.229, 0.224, 0.225]`). Fig \ref{fig:figure2}
+
+\begin{figure}[h]
+\includegraphics[width=0.35\textwidth, right]{sample_image.jpg}
+\caption{Sample unaltered image}
+\label{fig:figure2}
+\end{figure}
+
+Additionally, training images before normalization were augmented with random horizontal flip, random rotations and jitter Fig \ref{fig:figure3}
+
+\begin{figure}[h]
+\includegraphics[width=0.3\textwidth, right]{transformed_sample_image.jpg}
+\caption{Sample post-transformed image}
+\label{fig:figure3}
+\end{figure}
+
+The dataset was divided into training, validation, and test subsets containing 5,600, 1,200, and 1,200 images, respectively. The split was stratified to preserve class balance. All images were resized to 224 × 224 pixels and normalized using ImageNet channel statistics. Training augmentation included horizontal flipping, small rotations, and color jitter, while validation and test images were evaluated without random augmentation. The validation set was used for checkpoint selection and the test set for final performance evaluation.
+
+\subsection{Models}
+The initial selection for methos consist of two pre trained Pytorch's CNNs (resnet18, efficientnet b0), a Pytorch pretrained transformer based model (vit b 16), a small locally built RNN called (Small CNN), a pretrained historic CNN baseline from Pytorch (alexnet), and the same efficientnet b0 model but with two variants: with randomly-initiated weights and a further fine-tuned version) See Table \ref{tables:tab2}
+
+Five model configurations were initially considered to represent different approaches to image classification. ResNet-18 provides a residual CNN baseline, EfficientNet-B0 uses compound scaling to balance network depth, width, and resolution, and AlexNet serves as an earlier CNN architecture. ViT-B/16 uses self-attention over image patches rather than relying solely on convolutional feature extraction. A small CNN trained from scratch provides a lightweight baseline without ImageNet-pretrained features. EfficientNet-B0 was also evaluated with random initialization and with full-network fine-tuning to examine the role of pretraining.
+
+\begin{table}[htbp]
+\caption{Initial project's settings}
+\begin{center}
+\begin{tabular}{|m{4em}|m{10em}|m{4.5em}|m{4.5em}|}
+\hline
+\textbf{model}&\textit{model description}&\textit{total parameters}&\textit{trainable parameters}\\
+\hline
+    resnet18 & Pre-trained CNN. Residual connections help optimize deeper networks & 11,180,616 & 4,104 \\
+    \hline
+    efficientnet b0 & Pre-trained CNN. Balances network depth, width, and input resolution to improve efficiency. & 4,017,796 & 10,248 \\
+    \hline
+    vit b 16 & Pre-trained Transformer. Straightforward global-attention baseline & 85,804,808 & 6,152 \\
+    \hline
+    alexnet & Historical CNN baseline & 57,036,616 & 32,776 \\
+    \hline
+    small cnn & Locally built, light weight CNN. & 390,952 & 390,952 \\
+    \hline
+    efficientnet b0 scratch & EfficientNet with randomly assigned weights and backbone freeze & 4,017,796 & 4,017,796 \\
+    \hline
+    efficientnet b0 finetuned & Fine-tuned from pretrained efficientnet b0 checkpoint, sequential continuation of experiment & 4,017,796 & 4,017,796 \\
+\hline
+\end{tabular}
+\label{tables:tab2}
+\end{center}
+\end{table}
+
+For the initial pretrained experiments, the backbone parameters were frozen and only the classification head was trained. This feature-extraction strategy reduces the number of trainable parameters and limits the amount of optimization required. In contrast, the scratch-trained models learned all parameters from their random initialization. The fine-tuned EfficientNet-B0 experiment began from a pretrained checkpoint and allowed the backbone and classification head to update, enabling adaptation to the endoscopic image domain. These training configurations should be distinguished when interpreting the results because they differ in both initialization and the number of trainable parameters.
+
+\begin{figure}[h]
+\includegraphics[width=0.3\textwidth, right]{resnet_model_visualization.png}
+\caption{Resnet visualization}
+\label{fig:figure4}
+\end{figure}
+
+\section{Experimental setup}
+
+All experiments were conducted using the same dataset split and input resolution, with a fixed random seed to improve reproducibility. Pretrained feature-extraction runs were limited to ten epochs, while scratch-trained configurations were allowed more epochs and used early stopping. The checkpoint with the highest validation macro-F1 was retained for evaluation. This metric was selected because it summarizes class-wise F1 scores equally, reducing the influence of individual classes on model selection. Accuracy, macro-specificity, and Matthews correlation coefficient (MCC) were also reported to provide complementary measures of classification performance.
+
+Inference time was measured on the local NVIDIA GeForce GTX 1660 Ti using the same test set of 1,200 images. Latency per image was calculated by dividing the total inference time by the number of test images. Parameter counts describe model size, while training duration and inference latency reflect different aspects of computational cost. These measurements are hardware- and implementation-dependent; therefore, they should be interpreted as comparisons under the experimental setup used here rather than universal runtime estimates.
+
+The details of experimentation can be referred in Table \ref{tables:tab3}
+
+\begin{table}[htbp]
+\caption{Experiment Setup}
+\begin{center}
+\begin{tabular}{|m{8em}|m{20em}|}
+\hline
+\textbf{Setting}&\textit{Approach}\\
+\hline
+    Dataset split & 5,600 / 1,200 / 1,200 split \\
+\hline
+    Input resolution & 224 × 224 for all models \\
+\hline
+    Batch size & Start at 16 or 32; reduce if CUDA runs out of memory \\
+\hline
+    Pretrained models & 10 epochs maximum, early stopping \\
+\hline
+    Scratch CNN & Up to 50 epochs, early stopping \\
+\hline
+    Frozen layers & Frozen backbones for pre-trained models \\
+\hline
+    Learning rate & Dynamic learning rate, range from 10\textsuperscript{-3} to 10\textsuperscript{-6}, halved every patience=2 \\
+\hline
+    Early stopping & Patience = 5 \\
+\hline
+    Batch size & 16 \\
+\hline
+    Random seed & 5338 \\
+\hline
+    Checkpoint selection & Best validation macro-F1 \\
+\hline
+    Test set & Evaluate \\
+\hline
+    Randomness & Fix seed 5338 \\
+\hline
+    Reporting & Record epochs completed, training time, parameter count, and GPU model \\
+\hline
+    Evaluation & Accuracy, macro f1, macro specificity, matthews correlation coeficient, inference seconds, ms per image, validation macro f1 \\
+\hline
+\end{tabular}
+\label{tables:tab3}
+\end{center}
+\end{table}
+
+\subsection{Hardware}
+
+\begin{itemize}
+    \item Training device: cuda
+    \item GPU: NVIDIA GeForce GTX 1660 Ti
+    \item CUDA Version: 12.4
+    \item Python 3.11.3
+    \item Important libraries
+    \begin{itemize}
+        \item numpy==2.4.6
+        \item pandas==3.0.6
+        \item pillow==12.3.0
+        \item scikit-learn==1.9.1
+        \item scipy==1.17.1
+        \item torch==2.14.1+cu126
+        \item torchvision==0.29.1+cu126
+    \end{itemize}
+
+\end{itemize}
+
+\section{Results}
+
+\subsection{Test Results}
+
+\begin{table}[htbp]
+\caption{Results}
+\begin{center}
+\begin{tabular}{|m{5em}|m{4em}|m{4em}|m{4em}|m{4em}|m{4em}|}
+\hline
+\textbf{Model}&\textit{acurracy}&\textit{macro f1}&\textit{macro specificity}&\textit{MCC}&\textit{validation macr0 f1}\\
+\hline
+efficientnet b0 finetuned & 0.922 & 0.922 & 0.989 & 0.911 & 0.915 \\
+vit b 16 & 0.902 & 0.902 & 0.986 & 0.888 & 0.902 \\
+efficientnet b0 & 0.888 & 0.888 & 0.984 & 0.873 & 0.890 \\
+efficientnet b0 scratch & 0.872 & 0.872 & 0.982 & 0.854 & 0.884 \\
+small cnn & 0.861 & 0.860 & 0.980 & 0.842 & 0.840 \\
+resnet18 & 0.860 & 0.860 & 0.980 & 0.841 & 0.868 \\
+alexnet & 0.822 & 0.821 & 0.975 & 0.798 & 0.805 \\
+\hline
+\end{tabular}
+\label{tables:tab4}
+\end{center}
+\end{table}
+
+The fine-tuned EfficientNet-B0 achieved the strongest overall test performance, reaching 0.922 accuracy and a macro-F1 score of 0.922, with an MCC of 0.911. ViT-B/16 ranked second, with accuracy and macro-F1 both close to 0.902. The pretrained EfficientNet-B0 feature extractor achieved a macro-F1 of 0.888, while the scratch-trained EfficientNet-B0 reached 0.872. The SmallCNN and ResNet-18 obtained macro-F1 scores of approximately 0.860. AlexNet produced the lowest score among the reported configurations, at approximately 0.821 macro-F1.
+
+\subsection{Per-class precision, recall, and F1.}
+
+\begin{table}[htbp]
+\caption{Precision per class}
+\begin{center}
+\begin{tabular}{|m{4em}|m{2em}|m{2em}|m{1.8em}|m{4em}|m{4em}|m{4em}|}
+\hline
+\textbf{Class}&small cnn & resnet 18 & vit b 16 & efficientnet b0 & efficientnet b0 scratch & efficientnet b0 finetuned\\
+\hline
+dyed-lifted-polyps & 0.826 & 0.792 & 0.912 & 0.896 & 0.877 & 0.921 \\
+dyed-resection-margins & 0.774 & 0.853 & 0.908 & 0.894 & 0.859 & 0.940 \\
+esophagitis & 0.902 & 0.849 & 0.844 & 0.852 & 0.792 & 0.839 \\
+normal-cecum & 0.924 & 0.946 & 0.927 & 0.916 & 0.940 & 0.935 \\
+normal-pylorus & 0.967 & 0.918 & 0.993 & 0.973 & 0.980 & 0.993 \\
+normal-z-line & 0.771 & 0.753 & 0.805 & 0.754 & 0.758 & 0.834 \\
+polyps & 0.815 & 0.822 & 0.931 & 0.921 & 0.890 & 0.953 \\
+ulcerative-colitis & 0.942 & 0.977 & 0.897 & 0.914 & 0.882 & 0.966 \\
+accuracy & 0.861 & 0.860 & 0.902 & 0.888 & 0.872 & 0.922 \\
+macro avg & 0.865 & 0.864 & 0.902 & 0.890 & 0.872 & 0.923 \\
+weighted avg & 0.865 & 0.864 & 0.902 & 0.890 & 0.872 & 0.923 \\
+\hline
+\end{tabular}
+\label{tables:tab5}
+\end{center}
+\end{table}
+
+\begin{table}[ht]
+\caption{Recall per class}
+\begin{center}
+\begin{tabular}{|m{4em}|m{2em}|m{2em}|m{1.8em}|m{4em}|m{4em}|m{4em}|}
+\hline
+\textbf{Class}&small cnn & resnet 18 & vit b 16 & efficientnet b0 & efficientnet b0 scratch & efficientnet b0 finetuned\\
+\hline
+dyed-lifted-polyps & 0.727 & 0.840 & 0.900 & 0.860 & 0.853 & 0.933 \\
+dyed-resection-margins & 0.847 & 0.813 & 0.927 & 0.900 & 0.893 & 0.933 \\
+esophagitis & 0.733 & 0.713 & 0.793 & 0.727 & 0.760 & 0.833 \\
+normal-cecum & 0.967 & 0.927 & 0.927 & 0.940 & 0.940 & 0.953 \\
+normal-pylorus & 0.973 & 0.973 & 0.993 & 0.967 & 0.993 & 1. \\
+normal-z-line & 0.900 & 0.833 & 0.853 & 0.860 & 0.773 & 0.840 \\
+polyps & 0.880 & 0.927 & 0.893 & 0.927 & 0.867 & 0.953 \\
+ulcerative-colitis & 0.860 & 0.853 & 0.927 & 0.927 & 0.900 & 0.933 \\
+accuracy & 0.861 & 0.860 & 0.902 & 0.888 & 0.872 & 0.922 \\
+macro avg & 0.861 & 0.860 & 0.902 & 0.888 & 0.872 & 0.922 \\
+weighted avg & 0.861 & 0.860 & 0.902 & 0.888 & 0.872 & 0.922 \\
+\hline
+\end{tabular}
+\label{tables:tab6}
+\end{center}
+\end{table}
+
+\begin{table}[ht]
+\caption{F1 per class}
+\begin{center}
+\begin{tabular}{|m{4em}|m{2em}|m{2em}|m{1.8em}|m{4em}|m{4em}|m{4em}|}
+\hline
+\textbf{Class}&small cnn & resnet 18 & vit b 16 & efficientnet b0 & efficientnet b0 scratch & efficientnet b0 finetuned\\
+\hline
+dyed-lifted-polyps & 0.773 & 0.816 & 0.906 & 0.878 & 0.865 & 0.927 \\
+dyed-resection-margins & 0.809 & 0.833 & 0.917 & 0.897 & 0.876 & 0.936 \\
+esophagitis & 0.809 & 0.775 & 0.818 & 0.784 & 0.776 & 0.836 \\
+normal-cecum & 0.945 & 0.936 & 0.927 & 0.928 & 0.940 & 0.944 \\
+normal-pylorus & 0.970 & 0.945 & 0.993 & 0.970 & 0.987 & 0.997 \\
+normal-z-line & 0.831 & 0.791 & 0.828 & 0.804 & 0.766 & 0.837 \\
+polyps & 0.846 & 0.871 & 0.912 & 0.924 & 0.878 & 0.953 \\
+ulcerative-colitis & 0.899 & 0.911 & 0.911 & 0.921 & 0.891 & 0.949 \\
+accuracy & 0.861 & 0.860 & 0.902 & 0.888 & 0.872 & 0.922 \\
+macro avg & 0.860 & 0.860 & 0.902 & 0.888 & 0.872 & 0.922 \\
+weighted avg & 0.860 & 0.860 & 0.902 & 0.888 & 0.872 & 0.922 \\
+\hline
+\end{tabular}
+\label{tables:tab7}
+\end{center}
+\end{table}
+
+The per-class results show that performance varies across categories, even when aggregate metrics are high. For example, the fine-tuned EfficientNet-B0 achieved strong F1 scores for polyps and dyed-resection margins, while normal anatomical categories were generally classified reliably. Normal Z-line images were more challenging for several models, suggesting that distinguishing visually similar categories may remain difficult. These differences demonstrate why class-wise metrics and confusion matrices are useful alongside overall accuracy: they reveal errors that a single aggregate score can conceal.
+
+\subsection{Confusion matrices}
+
+\begin{figure}[h]
+\includegraphics[width=0.46\textwidth, right]{Models_Confusion_Matrices.png}
+\caption{Confusion matrices}
+\label{fig:figure5}
+\end{figure}
+
+The confusion matrices provide a complementary view of the classification errors. Most predictions fall along the diagonal, indicating correct classification, but off-diagonal entries reveal categories that the models confuse. These patterns can help identify whether errors are concentrated in specific classes or distributed across the dataset. Since the matrices are normalized by class recall, they are particularly useful for comparing how consistently each model recognizes individual categories. However, the observed confusion patterns alone do not establish the clinical significance of those errors.
+
+\subsection{Training metrics curves}
+
+\begin{figure}[h]
+\includegraphics[width=0.46\textwidth, right]{Metrics_vs_epochs.png}
+\caption{Metrics along the epochs}
+\label{fig:figure6}
+\end{figure}
+
+But pre-trained EfficientNet , randomly-initiated EfficientNet and Small CNN were run for more epochs until an early stop
+
+\begin{figure}[h]
+\includegraphics[width=0.46\textwidth, right]{Metrics_vs_Longer_Epochs.png}
+\caption{Metrics along more epochs}
+\label{fig:figure7}
+\end{figure}
+
+The learning curves illustrate differences in convergence behavior between the evaluated architectures. Pretrained models begin with features learned from a large image dataset, which can provide a useful starting point for the target task. Models trained from scratch must learn visual representations from the available endoscopic images, making their performance more dependent on the training process and stopping criterion. The longer training allowed for scratch configurations should be considered when comparing their final scores with those of the ten-epoch feature-extraction runs.
+
+\subsection{Training time, inference latency, and parameter counts}
+
+\begin{table}[ht]
+\caption{Time and computational costs}
+\begin{center}
+\begin{tabular}{|m{3.5em}|m{3.8em}|m{3.8em}|m{3em}|m{3em}|m{2em}|m{2em}|}
+\hline
+ & efficientnet b0 & efficientnet b0 finetuned & efficientnet b0 scratch & resnet18 & small cnn & vit b 16\\
+\hline
+epochs completed & 10   & 25   & 43   & 38   & 10   & 10   \\
+trainable parameters & 10248.   & 4017796.   & 4017796.   & 390952.   & 4104.   & 6152.   \\
+training min  & 20.383 & 65.667 & 111.05 & 83.183 & 21.617 & 41.233 \\
+inference seconds & 18.338  & 22.32 0 & 21.135  & 23.422  & 21.666  & 30.522  \\
+ms per image & 15.282  & 18.6 00 & 17.612  & 19.518  & 18.055  & 25.435  \\
+\hline
+\end{tabular}
+\label{tables:tab8}
+\end{center}
+\end{table}
+
+The computational results highlight a trade-off between predictive performance and inference cost. ViT-B/16 achieved strong classification performance but also had the highest reported inference latency, at approximately 25.4 ms per image. The pretrained EfficientNet-B0 was faster, at approximately 15.3 ms per image, while achieving a macro-F1 of 0.888. Fine-tuning EfficientNet-B0 increased its macro-F1 to 0.922, with latency rising to approximately 18.6 ms per image. Thus, fine-tuning improved predictive performance in this experiment without making inference as slow as ViT-B/16. These findings suggest that the best model depends on whether the priority is maximum classification performance or a balance between performance and computational cost.
+
+\subsection{Pretrained versus scratch EfficientNet comparison}
+
+\begin{table}[ht]
+\caption{Pre-trained vs Randomly-initiated model}
+\begin{center}
+\begin{tabular}{|m{8em}|m{4em}|m{4em}|m{4em}|}
+\hline
+Measure & efficientnet b0 finetuned & efficientnet b0 scratch & small cnn \\
+\hline
+test samples & 1200 & 1200 & 1200 \\
+accuracy & 0.922 & 0.872 & 0.861 \\
+macro f1 & 0.922 & 0.872 & 0.860 \\
+macro specificity & 0.989 & 0.982 & 0.980 \\
+mcc & 0.911 & 0.854 & 0.842 \\
+inference seconds & 22.320 & 21.135 & 21.666 \\
+ms per image & 18.6 & 17.612 & 18.055 \\
+checkpoint epoch & 25 & 38 & 33 \\
+validation macro f1 & 0.915 & 0.884 & 0.840 \\
+\hline
+\end{tabular}
+\label{tables:tab9}
+\end{center}
+\end{table}
+
+The comparison between EfficientNet-B0 configurations provides evidence of the value of pretrained initialization in this task. The fine-tuned model achieved a macro-F1 of 0.922, compared with 0.888 for the frozen-backbone pretrained model and 0.872 for the scratch-trained model. The scratch model therefore performed below both pretrained configurations under the reported settings. Fine-tuning also improved on feature extraction, suggesting that adapting the pretrained features to the endoscopic domain was beneficial. Nevertheless, the configurations used different training durations and optimization behavior, so the results should be interpreted as evidence from this experimental setup rather than a fully controlled estimate of the isolated effect of pretraining.
+
+\section{Discussion}
+
+The results indicate that both architecture choice and training strategy affect gastrointestinal image classification performance. Fine-tuned EfficientNet-B0 achieved the highest test macro-F1, while ViT-B/16 also performed strongly but required more inference time per image. The difference between frozen and fine-tuned EfficientNet-B0 suggests that allowing pretrained features to adapt to the target dataset can improve classification. The scratch-trained EfficientNet-B0 remained competitive but did not match the pretrained configurations, highlighting the potential value of transfer learning when labeled data and computational resources are limited.
+
+The per-class metrics and confusion matrices also show that model performance is not uniform across all categories. This matters because a high overall score can coexist with weaker recognition of particular anatomical or pathological classes. Inference latency provides another practical consideration: the highest-scoring model is not necessarily the fastest, and the preferred configuration will depend on the intended application. These experiments evaluate classification performance on a single dataset and do not establish clinical readiness or generalization to other endoscopy systems and patient populations.
+
+Several limitations should be considered. First, evaluation was restricted to Kvasir-v2, so performance on external datasets remains unknown. Second, the experiments differ in training duration and whether the backbone was frozen, scratch-trained, or fine-tuned, which limits strict comparisons between training strategies. Third, inference times depend on the specific GPU, batch size, and implementation. Finally, visual explanation methods such as Grad-CAM may help inspect model attention, but they should be treated as qualitative diagnostic tools rather than proof that predictions rely on medically meaningful features.
+
+\section{Conclusion and future works}
+
+This study compared pretrained CNNs, a Vision Transformer, and a lightweight CNN for eight-class gastrointestinal image classification using Kvasir-v2. Among the evaluated configurations, fine-tuned EfficientNet-B0 achieved the highest test macro-F1 (0.922), followed by ViT-B/16 (0.902). The comparison also showed that fine-tuning improved on frozen feature extraction for EfficientNet-B0, while the scratch-trained model achieved lower performance under the reported settings. Computational measurements further showed that accuracy and inference latency must be considered together when selecting an architecture.
+
+Future work should evaluate the models on external endoscopy datasets to assess generalization, repeat experiments with matched training protocols and multiple random seeds, and investigate class-specific errors in greater depth. Grad-CAM and Transformer attention visualizations could provide additional qualitative insight into model behavior. These extensions would help determine whether the observed performance differences remain consistent across datasets and experimental conditions.
+
+\section*{Acknowledgment}
+
+To Emma.
+And coffee, of course.
+
+
+\begin{thebibliography}{00}
+\bibitem{b1} Pogorelov, K., Randel, K. R., Griwodz, C., Eskeland, S. L., de Lange, T., Johansen, D., Spampinato, C., Dang-Nguyen, D.-T., Lux, M., Schmidt, P. T., Riegler, M., & Halvorsen, P. (2017). KVASIR: A multi-class image dataset for computer aided gastrointestinal disease detection. In Proceedings of the 8th ACM on Multimedia Systems Conference (pp. 164–169). Association for Computing Machinery. https://doi.org/10.1145/3083187.3083212
+\bibitem{b2} Mei, J., Zhou, T., Huang, K., Zhang, Y., Zhou, Y., Wu, Y., & Fu, H. (2025). A survey on deep learning for polyp segmentation: Techniques, challenges and future trends. Visual Intelligence, 3, Article 1. https://doi.org/10.1007/s44267-024-00071-w
+\bibitem{b3} S. Dookhee, "Gastrointestinal Endoscopic Image Classification using Transfer Learning," 2023 IEEE Third International Conference on Signal, Control and Communication (SCC), Hammamet, Tunisia, 2023, pp. 1-6, doi: 10.1109/SCC59637.2023.10527487
+\bibitem{b4} V. Patel, K. Patel, P. Goel and M. Shah, "Classification of Gastrointestinal Diseases from Endoscopic Images Using Convolutional Neural Network with Transfer Learning," 2024 5th International Conference on Intelligent Communication Technologies and Virtual Mobile Networks (ICICV), Tirunelveli, India, 2024, pp. 504-508, doi: 10.1109/ICICV62344.2024.00085.
+\end{thebibliography}
+
+\end{document}
