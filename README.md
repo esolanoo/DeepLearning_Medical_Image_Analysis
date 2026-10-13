@@ -1,50 +1,47 @@
 # Deep Learning for Gastrointestinal Image Classification
 
 ## Overview
-
-This project compares three deep learning architectures for multiclass gastrointestinal image classification using the **Kvasir dataset**. The objective is to evaluate how convolutional neural networks (CNNs) and Vision Transformers perform when classifying endoscopic images into eight categories.
+This project benchmarks deep learning models for eight-class gastrointestinal image classification using the [Kvasir dataset](https://datasets.simula.no/kvasir/). It compares predictive performance and computational efficiency across pretrained models and a CNN trained from scratch.
 
 ## Models
+- **ResNet-18** — CNN with residual connections.
+- **EfficientNet-B0** — computationally efficient CNN.
+- **ViT-B/16** — Vision Transformer.
+- **AlexNet** — CNN baseline.
+- **Small CNN** — trained from scratch.
 
-* **ResNet-18:** CNN baseline with residual connections.
-* **EfficientNet-B0:** computationally efficient CNN.
-* **Vision Transformer (ViT-B/16):** transformer-based image classifier.
-
-All models will use ImageNet-pretrained weights and a consistent experimental protocol.
+EfficientNet-B0 is also evaluated using different training strategies: pretrained feature extraction, training from scratch, and fine-tuning.
 
 ## Dataset
+The dataset contains eight classes: dyed-lifted polyps, dyed-resection margins, esophagitis, normal cecum, normal pylorus, normal Z-line, polyps, and ulcerative colitis.
 
-The [Kvasir dataset](https://datasets.simula.no/kvasir/) contains endoscopic images representing anatomical landmarks, pathological findings, and endoscopic procedures:
+## How to Run (Windows CMD)
 
-* Dyed-lifted polyps
-* Dyed-resection margins
-* Esophagitis
-* Normal cecum
-* Normal pylorus
-* Normal Z-line
-* Polyps
-* Ulcerative colitis
+1. Clone the repository and enter its directory:
+   ```cmd
+   git clone https://github.com/esolanoo/DeepLearning_Medical_Image_Analysis
+   cd <REPOSITORY_FOLDER>
+   ```
 
-## Methodology
+2. Create and activate a virtual environment:
+   ```cmd
+   python -m venv .venv
+   .venv\Scripts\activate
+   ```
 
-1. Inspect the dataset and verify class distributions.
-2. Resize and normalize images; apply data augmentation to training data only.
-3. Create stratified training, validation, and test splits.
-4. Train and evaluate the three pretrained architectures.
-5. Compare classification performance, generalization, convergence, and computational cost.
+3. Install the required dependencies:
+   ```cmd
+   pip install -r requirements.txt
+   ```
+
+4. Configure the dataset path and experiment settings as required by the scripts.
+
+5. Run the training or evaluation script:
+   ```cmd
+   python train.py
+   ```
+
+Replace the placeholders with the actual folder name, and script names. Check the scripts for any additional arguments or configuration requirements.
 
 ## Evaluation
-
-* Accuracy and macro-F1 score
-* Per-class precision, recall, and F1-score
-* Training and inference time
-* Number of parameters and peak GPU memory
-* Training and validation learning curves
-
-## Reproducibility
-
-The repository will include preprocessing scripts, model training and evaluation code, configuration files, random seeds, and saved experimental results.
-
-## Scope
-
-This is an academic image-classification experiment, not a clinically validated diagnostic system.
+Models are compared using accuracy, macro-F1, per-class metrics, Matthews correlation coefficient (MCC), model parameters, training time, and inference latency.

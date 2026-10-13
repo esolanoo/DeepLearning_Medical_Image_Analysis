@@ -28,7 +28,6 @@ train_ds, val_ds, test_ds = [ds for ds in data['datasets']]
 def calculate_metrics(y_true, y_pred):
     labels = list(range(NUM_CLASSES))
     cm = confusion_matrix(y_true, y_pred, labels=labels)
-
     specificity_per_class = []
     for i in range(NUM_CLASSES):
         tp = cm[i, i]
@@ -37,9 +36,7 @@ def calculate_metrics(y_true, y_pred):
         tn = cm.sum() - tp - fn - fp
 
         denominator = tn + fp
-        specificity_per_class.append(
-            tn / denominator if denominator else float("nan")
-        )
+        specificity_per_class.append(tn / denominator if denominator else float("nan"))
         
     results = {
         "accuracy": accuracy_score(y_true, y_pred),
@@ -89,7 +86,7 @@ def train_one_model(name):
     # Dynamic lr!!!
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        mode="max",       # We want validation macro-F1 to increase
+        mode="max",       # Validation macro-F1 to increase
         factor=0.5,       # Reduce LR by half
         patience=2,       # Wait 2 epochs without improvement
         threshold=1e-3,
@@ -157,7 +154,6 @@ def train_one_model(name):
         # Dynamic lr!!!
         scheduler.step(val_metrics["macro_f1"])
 
-        # Select the checkpoint by validation macro-F1.
         if val_metrics["macro_f1"] > best_f1:
             best_f1 = val_metrics["macro_f1"]
             best_epoch = epoch
@@ -371,7 +367,7 @@ if __name__ == "__main__":
     for model_name in MODELS:
         summaries.append(train_one_model(model_name))
 
-    summaries.append(fine_tune_efficientnet())
+    # summaries.append(fine_tune_efficientnet())
 
     pd.DataFrame(summaries).to_csv(RESULT_DIR / f"training_summary.csv", index=False)
     print("\nTraining complete. Summary saved to results/")
