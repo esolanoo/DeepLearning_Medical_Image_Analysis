@@ -20,7 +20,6 @@ The dataset contains eight classes: dyed-lifted polyps, dyed-resection margins, 
 1. Clone the repository and enter its directory:
    ```cmd
    git clone https://github.com/esolanoo/DeepLearning_Medical_Image_Analysis
-   cd <REPOSITORY_FOLDER>
    ```
 
 2. Create and activate a virtual environment:
@@ -40,8 +39,6 @@ The dataset contains eight classes: dyed-lifted polyps, dyed-resection margins, 
    ```cmd
    python train.py
    ```
-
-Replace the placeholders with the actual folder name, and script names. Check the scripts for any additional arguments or configuration requirements.
-
+   
 ## Evaluation
 Models are compared using accuracy, macro-F1, per-class metrics, Matthews correlation coefficient (MCC), model parameters, training time, and inference latency.
